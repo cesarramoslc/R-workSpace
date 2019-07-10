@@ -22,6 +22,7 @@ summary(TBC_2011_Alumno)
 ```
 
 
+
 ```{r}
 
 library(VIM)
@@ -29,6 +30,20 @@ analisis <- aggr(TBC_2011_Alumno)
 summary(analisis)
 
 ```
+
+```{r}
+
+TBC_2011_Alumno_noNA <- TBC_2011_Alumno[!is.na(TBC_2011_Alumno$P29),]
+head(TBC_2011_Alumno_noNA, n= 8)
+
+```
+
+```{r}
+
+#write.table(TBC_2011_Alumno_noNA,file="../data/TBC_2011_Alumno_noNA.csv", sep=";", dec=",")
+
+```
+
 
 
 
