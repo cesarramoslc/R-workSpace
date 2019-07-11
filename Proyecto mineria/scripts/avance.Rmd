@@ -1,49 +1,328 @@
 ---
 title: "Proyecto final"
-author: "Grupo Z"
-date: "27 de junio de 2019"
+author: "Grupo Ramos"
+date: "Junio de 2019"
 output: html_document
 ---
-
++ Cargamos los datos desde el directorio donde esta guardado
 ```{r}
 getwd()
 library(foreign)
 TBC_2011_Alumno<-read.spss("C:/Users/Userr/Desktop/VIII ciclo/Mineria de Datos/369-Modulo295/02_TBC_2011_Alumno.sav", to.data.frame=TRUE)
+#Observar los nombres de los atributos
+names(TBC_2011_Alumno)
+```
+
+##### Detallamos cada una de las variables.
++ Aun no contamos con un target debido a que despues del analisis nosotros le agregaremos.
+```{r}
+library(Hmisc)
+#Observamos los 5 primeros registros de los atributos
+head(TBC_2011_Alumno, n = 5)
 
 ```
 
++ Revisamos la estructura de los datos
 ```{r}
-library(Hmisc)
-head(TBC_2011_Alumno)
+
 str(TBC_2011_Alumno)
 describe(TBC_2011_Alumno)
 summary(TBC_2011_Alumno)
-
 ```
 
+Según los resultados se observa que los atributos P21, P25, P27, P29 son numericos por lo que se debería cambiar según coerción.
 
+```{r}
+TBC_2011_Alumno$P21<-as.factor(TBC_2011_Alumno$P21)
+TBC_2011_Alumno$P25<-as.factor(TBC_2011_Alumno$P25)
+TBC_2011_Alumno$P27<-as.factor(TBC_2011_Alumno$P27)
+TBC_2011_Alumno$P29<-as.factor(TBC_2011_Alumno$P29)
+
+str(TBC_2011_Alumno)
+summary(TBC_2011_Alumno$P29)
+
+```
 
 ```{r}
 
 library(VIM)
+#Graficamos los datos perdidos
 analisis <- aggr(TBC_2011_Alumno)
 summary(analisis)
 
 ```
 
++ Se observa que se encuentras datos vacios en la data.
++ Se observa tambien existe una que de relacion fuerte entre las columnas con datos vacios.
+
 ```{r}
+
 
 TBC_2011_Alumno_noNA <- TBC_2011_Alumno[!is.na(TBC_2011_Alumno$P29),]
-head(TBC_2011_Alumno_noNA, n= 8)
+
+```
+
++ Eliminamos los la mayor cantidad de datos vacios por que se encontraron y analisamos de nuevo la nueva tabla
+
+```{r}
+
+library(VIM)
+#vizualisamos un resumen de los datos para ver si todavia hay datos vacios
+summary(TBC_2011_Alumno_noNA)
+#Graficamos la nueva DB sin los elementos NA's
+analisis2 <- aggr(TBC_2011_Alumno_noNA)
+summary(analisis2)
+
+```
+
++ Utilizamos la funcion knn para la normalizacion de los datos. Este los Clasifica como K-Vecino Más Cercano
+```{r}
+
+library(DMwR)
+TBC_2011_Alumno_noNA<-knnImputation(TBC_2011_Alumno_noNA)
+analisis3 <- aggr(TBC_2011_Alumno_noNA)
+
+```
+
++ Encontramos que la data ya no esta con columnas vacias.
+
++ Exportamos la data a un excel para agregarle un target.
+
+```{r}
+
+write.xlsx(TBC_2011_Alumno_noNA,"../data/TBC_2011_Alumno_noNA.xlsx")
+
+```
+
+
++ Procedemos a importar la data nueva con un el target RESULTADO que nos indique si el(la) niño(a) podria estar infectado o no con la bacteria.
+```{r}
+
+#cargamos la nueva DB actualizada
+library(xlsx)
+library(readxl)
+TBC_2011_Alumno_noNA_2<-read_excel("../data/TBC_2011_Alumno_noNA.xlsx")
+TBC_2011_Alumno_noNA_2$P20<-as.factor(TBC_2011_Alumno_noNA_2$P20)
+TBC_2011_Alumno_noNA_2$P21<-as.factor(TBC_2011_Alumno_noNA_2$P21)
+TBC_2011_Alumno_noNA_2$P25<-as.factor(TBC_2011_Alumno_noNA_2$P25)
+TBC_2011_Alumno_noNA_2$P27<-as.factor(TBC_2011_Alumno_noNA_2$P27)
+TBC_2011_Alumno_noNA_2$P29<-as.factor(TBC_2011_Alumno_noNA_2$P29)
+TBC_2011_Alumno_noNA_2$P31<-as.factor(TBC_2011_Alumno_noNA_2$P31)
+TBC_2011_Alumno_noNA_2$Ubigeo<-as.factor(TBC_2011_Alumno_noNA_2$Ubigeo)
+#vemos su estructura
+str(TBC_2011_Alumno_noNA_2)
+```
+
++ Observamos ahora que el target agregado esta como numerico y este según la regla del negocio debe ser factor, donde 1 es no infectado y 0 es infectado
+
+```{r}
+library(dplyr)
+library(Hmisc)
+TBC_2011_Alumno_noNA_2$RESULTADO<-as.factor(TBC_2011_Alumno_noNA_2$RESULTADO)
+#procedemos a sacar la variable ubigeo(codigo de ubicacion geografica), ya que proporciona la misma informacion que el distrito(pero de manera numerica)
+TBC_2011_Alumno_noNA_2<-select(TBC_2011_Alumno_noNA_2, -Ubigeo)
+str(TBC_2011_Alumno_noNA_2)
+describe(TBC_2011_Alumno_noNA_2)
+```
+
+---
+
+### Analisis de las variables
++ Con la limpieza de datos ya hecha y el target ya definido procedemos a realizar un analisis mas profundo de los datos.
++ Resumen del target
+```{r}
+
+library(ggplot2)
+table(TBC_2011_Alumno_noNA_2$RESULTADO)
+#graficamos
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_bar(mapping = aes(x=RESULTADO))
+```
+
++ obs: el conjunto de datos desbalanceados, esto afectará al aprendizaje del modelo
+
+##### Procedemos con un analisis descriptivo
+
+```{r}
+
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_bar(mapping = aes(x=P20, color=RESULTADO))
 
 ```
 
 ```{r}
 
-#write.table(TBC_2011_Alumno_noNA,file="../data/TBC_2011_Alumno_noNA.csv", sep=";", dec=",")
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_bar(mapping = aes(x=P21, color=RESULTADO))
 
 ```
 
+```{r}
+
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_bar(mapping = aes(x=P25, color=RESULTADO))
+
+```
+
+```{r}
+
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_bar(mapping = aes(x= P31, color=RESULTADO))+ coord_flip()
+            
+```
+
+```{r}
+
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_histogram(mapping = aes(x=P22, color=RESULTADO))
+
+```
+
+```{r}
+
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_histogram(mapping = aes(x=P26, color=RESULTADO))
+
+```
+
+```{r}
+
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_histogram(mapping = aes(x=P28, color=RESULTADO))
+
+```
+
+```{r}
+
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_histogram(mapping = aes(x=P30, color=RESULTADO))
+
+```
+
+```{r}
+
+ggplot(data=TBC_2011_Alumno_noNA_2)+
+  geom_density(mapping = aes(x= FACTOR , color=RESULTADO))+theme_get()
+
+```
+
+##### Análisis bivariado y multivariado
+
+```{r}
+
+#plot(TBC_2011_Alumno_noNA_2)
+plot(TBC_2011_Alumno_noNA_2[,3:11])
+
+```
+
+```{r}
+
+#Creamos una nueva data que contenga solo las variables numericas
+newTBC_2011_Alumno_noNA_2<-select(TBC_2011_Alumno_noNA_2, -P20, -P21, -P25, -P31)
+
+#Vemos si existe correlacion entre las variables numericas
+plot(newTBC_2011_Alumno_noNA_2[,3:7])
+cor(newTBC_2011_Alumno_noNA_2[,3:7])
+
+```
++ Se observa que no existe correlacion entre las variables
+
+---
+
+### MODELAMIENTO PREDICTIVO
+
++ dividimos la data 2 una de entrenamiento(train) y otra de prueba(test) en un porcentaje de 70 y 30 respectivamente
+
+```{r}
+set.seed(111)
+muestra<-sample(2488, 1021)
+train<-newTBC_2011_Alumno_noNA_2[-muestra,]
+test<-newTBC_2011_Alumno_noNA_2[muestra,]
+#Vemos las dimensiones de ambas
+dim(train)
+dim(test)
+
+```
+
+#### Modelo de Arbol
+```{r}
+library(rpart)
+library(dplyr)
+#Le quite la variable induracion por que si no el modelo se hacia tan sencilla
+newtrain<-select(train, -P30)
+newtest<-select(test, -P30)
+
+modeloarbol1<-rpart(RESULTADO~.,data = train, method = "class")
+modeloarbol1
+
+```
+
+```{r}
+
+library(partykit)
+library(rpart.plot)
+prp(modeloarbol1, type=1, extra=1)
+
+```
+
+```{r}
+
+#Predecimos en la data de prueba.
+prediccion1<- predict(modeloarbol1, test, type = "class")
+table(prediccion1, test$RESULTADO)
+
+```
+
+```{r}
+library(caret)
+confusionMatrix(prediccion1, newtest$RESULTADO)
+
+```
+
+#### Modelo Redes Neuronales
+
+```{r}
+library(nnet)
+library(neuralnet)
+
+modeloredes<-nnet(RESULTADO~.,newtrain,size=10, maxit=10000, trace=F)
+modeloredes
+```
+
+
+```{r}
+
+prediccion2<- predict(modeloredes, newtest, type= "class")
+table(prediccion2, test$RESULTADO)
+
+```
+
+```{r}
+library(caret)
+prediccion2<-as.factor(prediccion2)
+confusionMatrix(prediccion2, test$RESULTADO)
+
+```
+
+
+```{r}
+library(ROCR)
+CurvaROC1 <- predict(modeloarbol1, newTBC_2011_Alumno_noNA_2, type = "prob")[,2]
+prediccionesPlot <- prediction(CurvaROC1, newTBC_2011_Alumno_noNA_2$RESULTADO)
+grafica <- performance(prediccionesPlot, "tpr", "fpr")
+plot(grafica)
+
+```
+
+
+```{r}
+library(ROCR)
+CurvaROC2 <- predict(modeloredes, newTBC_2011_Alumno_noNA_2, type = "prob")[,2]
+prediccionesPlot1 <- prediction(CurvaROC2, newTBC_2011_Alumno_noNA_2$RESULTADO)
+grafica1 <- performance(prediccionesPlot1, "tpr", "fpr")
+plot(grafica, colorize = T)
+
+```
 
 
 
